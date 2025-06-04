@@ -15,9 +15,12 @@ interface CompanyFeature {
 }
 
 interface SearchResult {
+  type: 'company' | 'city';
   name: string;
-  logoUrl: string;
+  logoUrl?: string;
   coordinates: [number, number];
+  country?: string;
+  companyCount?: number;
 }
 
 export default function CompanyMap() {
@@ -54,13 +57,23 @@ export default function CompanyMap() {
     }
   };
 
-  const handleCompanySelect = (company: SearchResult) => {
+  const handleSelectionSelect = (selection: SearchResult) => {
     if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: company.coordinates,
-        zoom: 20,
-        duration: 2000
-      });
+      if (selection.type === 'city') {
+        // For cities, zoom to show the entire city area
+        mapRef.current.flyTo({
+          center: selection.coordinates,
+          zoom: 10, // City-level zoom
+          duration: 2000
+        });
+      } else {
+        // For companies, zoom to company level
+        mapRef.current.flyTo({
+          center: selection.coordinates,
+          zoom: 20, // Company-level zoom
+          duration: 2000
+        });
+      }
       
       // Trigger updateClusters after the map finishes moving
       mapRef.current.once('moveend', () => {
@@ -100,8 +113,8 @@ export default function CompanyMap() {
                   const { name, logoUrl } = feature.properties;
 
                   console.log(`Creating marker for: "${name}"`);
-                  console.log(`Comparing with selected: "${company.name}"`);
-                  console.log(`Match: ${name.toLowerCase() === company.name.toLowerCase()}`);
+                  console.log(`Comparing with selected: "${selection.name}"`);
+                  console.log(`Match: ${name.toLowerCase() === selection.name.toLowerCase()}`);
 
                   const wrapper = document.createElement('div');
                   wrapper.style.display = 'flex';
@@ -136,7 +149,7 @@ export default function CompanyMap() {
                   label.style.borderRadius = '4px';
 
                   // Highlight the selected company marker (case-insensitive comparison)
-                  if (name.toLowerCase() === company.name.toLowerCase()) {
+                  if (selection.type === 'company' && name.toLowerCase() === selection.name.toLowerCase()) {
                     console.log(`Highlighting marker for: ${name}`);
                     wrapper.style.transform = 'scale(1.2)';
                     wrapper.style.zIndex = '1000';
@@ -208,7 +221,7 @@ export default function CompanyMap() {
                               label.style.borderRadius = '4px';
 
                               // Highlight the selected company marker
-                              if (name.toLowerCase() === company.name.toLowerCase()) {
+                              if (selection.type === 'company' && name.toLowerCase() === selection.name.toLowerCase()) {
                                 console.log(`Highlighting expanded marker for: ${name}`);
                                 wrapper.style.transform = 'scale(1.2)';
                                 wrapper.style.zIndex = '1000';
@@ -239,16 +252,16 @@ export default function CompanyMap() {
                 }
               });
               
-              console.log(`Loaded ${data.features.length} features, looking for: ${company.name}`);
+              console.log(`Loaded ${data.features.length} features, looking for: ${selection.name}`);
               console.log('Features data:', data.features);
             })
             .catch(error => {
               console.error('Error fetching clusters after navigation:', error);
             });
-        }, 300);
+        }, 300); // Increased delay from 100ms to 300ms
       });
     }
-    setSearchQuery(company.name);
+    setSearchQuery(selection.name);
     setShowSuggestions(false);
   };
 
@@ -463,10 +476,10 @@ export default function CompanyMap() {
               maxHeight: '300px',
               overflowY: 'auto'
             }}>
-              {suggestions.map((company, index) => (
+              {suggestions.map((item, index) => (
                 <div
                   key={index}
-                  onClick={() => handleCompanySelect(company)}
+                  onClick={() => handleSelectionSelect(item)}
                   style={{
                     padding: '14px 18px',
                     cursor: 'pointer',
@@ -480,27 +493,69 @@ export default function CompanyMap() {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
                 >
-                  <img
-                    src={company.logoUrl}
-                    alt={company.name}
-                    style={{
+                  {item.type === 'city' ? (
+                    // City icon
+                    <div style={{
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid #f3f4f6'
-                    }}
-                    onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/28';
-                    }}
-                  />
-                  <span style={{ 
-                    fontSize: '15px', 
-                    fontWeight: '500',
-                    color: '#1f2937'
-                  }}>
-                    {company.name}
-                  </span>
+                      backgroundColor: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      🏙️
+                    </div>
+                  ) : (
+                    // Company logo
+                    <img
+                      src={item.logoUrl}
+                      alt={item.name}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid #f3f4f6'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/28';
+                      }}
+                    />
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '500',
+                      color: '#1f2937'
+                    }}>
+                      {item.name}
+                    </div>
+                    {item.type === 'city' && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        marginTop: '2px'
+                      }}>
+                        
+                      </div>
+                    )}
+                  </div>
+                  {item.type === 'city' && (
+                    <div style={{
+                      fontSize: '11px',
+                      color: '#10b981',
+                      fontWeight: '500',
+                      padding: '2px 6px',
+                      backgroundColor: '#ecfdf5',
+                      borderRadius: '4px'
+                    }}>
+                      CITY
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
