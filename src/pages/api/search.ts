@@ -6,6 +6,9 @@ interface Company {
   name: string;
   logoUrl: string;
   coordinates: [number, number]; // [lng, lat]
+  jobsPage?: string;
+  description?: string;
+  socialLinks?: string[];
 }
 
 interface City {
@@ -24,6 +27,9 @@ interface CompanyResult {
   name: string;
   logoUrl: string;
   coordinates: [number, number];
+  jobsPage?: string;
+  description?: string;
+  socialLinks?: string[];
 }
 
 // Cache data to avoid reading files on every request
@@ -33,7 +39,7 @@ function loadData(): { companies: Company[]; cities: City[] } {
   if (!dataCache) {
     try {
       // Read companies data
-      const companiesPath = path.join(process.cwd(), 'public', 'final_merged_companies.json');
+      const companiesPath = path.join(process.cwd(), 'public', 'scraped_fortune500_with_details_finals.json');
       const companies = JSON.parse(fs.readFileSync(companiesPath, 'utf-8'));
 
       // Read cities data
@@ -104,7 +110,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         type: 'company' as const,
         name: company.name,
         logoUrl: company.logoUrl,
-        coordinates: company.coordinates
+        coordinates: company.coordinates,
+        jobsPage: company.jobsPage,
+        description: company.description,
+        socialLinks: company.socialLinks
       }));
 
     results.push(...scoredCompanies);

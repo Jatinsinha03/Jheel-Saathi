@@ -1,19 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import { PrismaClient } from '../../generated/prisma';
 import Supercluster from 'supercluster';
 
-interface Company {
-  name: string;
-  logoUrl: string;
-  coordinates: [number, number]; // [lng, lat]
-}
+const prisma = new PrismaClient();
 
 type GeoJSONFeature = {
   type: 'Feature';
   properties: {
+    id: string;
     name: string;
-    logoUrl: string;
+    description: string | null;
   };
   geometry: {
     type: 'Point';
@@ -24,22 +20,31 @@ type GeoJSONFeature = {
 // Singleton supercluster instance
 let index: Supercluster | null = null;
 
-function initializeSupercluster(): Supercluster | null {
+async function initializeSupercluster(): Promise<Supercluster | null> {
   if (index) return index;
 
   try {
-    const dataPath = path.join(process.cwd(), 'public', 'final_merged_companies.json');
-    const raw: Company[] = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+    // Fetch water bodies from database
+    const waterBodies = await prisma.waterBody.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        latitude: true,
+        longitude: true,
+      }
+    });
 
-    const points: GeoJSONFeature[] = raw.map(company => ({
+    const points: GeoJSONFeature[] = waterBodies.map(waterBody => ({
       type: 'Feature',
       properties: {
-        name: company.name,
-        logoUrl: company.logoUrl
+        id: waterBody.id,
+        name: waterBody.name,
+        description: waterBody.description
       },
       geometry: {
         type: 'Point',
-        coordinates: company.coordinates
+        coordinates: [waterBody.longitude, waterBody.latitude] // [lng, lat]
       }
     }));
 
@@ -56,7 +61,7 @@ function initializeSupercluster(): Supercluster | null {
   }
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -67,7 +72,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Missing zoom parameter' });
   }
 
-  const supercluster = initializeSupercluster();
+  const supercluster = await initializeSupercluster();
   if (!supercluster) {
     return res.status(500).json({ error: 'Failed to initialize clustering engine' });
   }
