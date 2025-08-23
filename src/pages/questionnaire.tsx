@@ -32,7 +32,7 @@ export default function QuestionnairePage() {
   });
 
   // Fetch previous questionnaires for this water body
-  const [previousQuestionnaires, setPreviousQuestionnaires] = useState<any[]>([]);
+  const [previousQuestionnaires, setPreviousQuestionnaires] = useState<QuestionnaireFormData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export default function QuestionnairePage() {
                     color: '#374151',
                     fontSize: '0.875rem'
                   }}>
-                    "{note}"
+                    &quot;{note}&quot;
                   </div>
                 ))}
               </div>
