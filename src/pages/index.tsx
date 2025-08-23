@@ -227,28 +227,31 @@ export default function WaterBodyMap() {
         <div style={{
           position: 'absolute',
           top: '20px',
-          left: '80px',
+          left: '220px',
           zIndex: 1000,
           width: '300px'
         }}>
           <div style={{ position: 'relative' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search water bodies..."
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '16px',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                outline: 'none',
-                transition: 'border-color 0.2s ease'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#10b981'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-            />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search water bodies..."
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '16px',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              outline: 'none',
+              transition: 'border-color 0.2s ease',
+              backgroundColor: '#f3f4f6',   // light gray background
+              color: '#111827'              // dark text color
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#10b981'}
+            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+          />
+
             
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
