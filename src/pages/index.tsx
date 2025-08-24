@@ -32,6 +32,12 @@ interface WaterBodyDetails {
   questionnaires?: Questionnaire[];
 }
 
+interface AISummary {
+  summary: string;
+  generatedAt: string;
+  isLoading: boolean;
+}
+
 export default function WaterBodyMap() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -46,6 +52,13 @@ export default function WaterBodyMap() {
     latitude: '',
     longitude: '',
     description: ''
+  });
+
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState<AISummary>({
+    summary: '',
+    generatedAt: '',
+    isLoading: false
   });
 
   // Fetch water bodies
@@ -164,9 +177,59 @@ export default function WaterBodyMap() {
     };
   };
 
+  // Generate AI summary for selected water body
+  const generateAISummary = async (waterBody: WaterBodyDetails) => {
+    if (!waterBody.questionnaires || waterBody.questionnaires.length === 0) return;
+    
+    setAiSummary(prev => ({ ...prev, isLoading: true }));
+    
+    try {
+      const response = await fetch('/api/generate-ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          waterBodyId: waterBody.id,
+          waterBodyName: waterBody.name,
+          previousAssessments: waterBody.questionnaires
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiSummary({
+          summary: data.summary,
+          generatedAt: data.generatedAt,
+          isLoading: false
+        });
+      } else {
+        console.error('Failed to generate AI summary');
+        setAiSummary(prev => ({ ...prev, isLoading: false }));
+      }
+    } catch (error) {
+      console.error('Error generating AI summary:', error);
+      setAiSummary(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Format AI summary to show only first 5-6 lines
+  const formatAISummary = (summary: string) => {
+    const lines = summary.split('\n').filter(line => line.trim());
+    const firstLines = lines.slice(0, 6);
+    return firstLines.join('\n');
+  };
+
   useEffect(() => {
     fetchWaterBodies();
   }, []);
+
+  // Generate AI summary when water body is selected
+  useEffect(() => {
+    if (selectedWaterBody && selectedWaterBody.questionnaires && selectedWaterBody.questionnaires.length > 0) {
+      generateAISummary(selectedWaterBody);
+    } else {
+      setAiSummary({ summary: '', generatedAt: '', isLoading: false });
+    }
+  }, [selectedWaterBody]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -433,6 +496,86 @@ export default function WaterBodyMap() {
                     </>
                   );
                 })()}
+              </div>
+            )}
+
+            {/* AI Summary Section */}
+            {selectedWaterBody.questionnaires && selectedWaterBody.questionnaires.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ 
+                  color: '#374151', 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  marginBottom: '16px' 
+                }}>
+                  AI Summary
+                </h3>
+                
+                {aiSummary.isLoading ? (
+                  <div style={{ 
+                    backgroundColor: '#f9fafb', 
+                    borderRadius: '8px', 
+                    padding: '16px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid #e5e7eb',
+                        borderTop: '2px solid #10b981',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      <span style={{ color: '#6b7280', fontSize: '14px' }}>
+                        Generating AI summary...
+                      </span>
+                    </div>
+                  </div>
+                ) : aiSummary.summary ? (
+                  <div style={{ 
+                    backgroundColor: '#f9fafb', 
+                    borderRadius: '8px', 
+                    padding: '16px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ 
+                      color: '#374151', 
+                      fontSize: '14px', 
+                      lineHeight: '1.5',
+                      whiteSpace: 'pre-line'
+                    }}>
+                      {formatAISummary(aiSummary.summary)}
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginTop: '12px'
+                    }}>
+                      <span style={{ color: '#6b7280', fontSize: '12px' }}>
+                        Generated: {new Date(aiSummary.generatedAt).toLocaleDateString()}
+                      </span>
+                      <button
+                        onClick={() => generateAISummary(selectedWaterBody)}
+                        disabled={aiSummary.isLoading}
+                        style={{
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '6px 12px',
+                          cursor: aiSummary.isLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          opacity: aiSummary.isLoading ? 0.6 : 1
+                        }}
+                      >
+                        🔄 Refresh
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
 

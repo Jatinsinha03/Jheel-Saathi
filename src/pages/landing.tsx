@@ -2,24 +2,43 @@
 
 import React from "react";
 import Link from "next/link";
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LandingPage() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-[#bbdde1] flex flex-col font-sans">
       {/* Navbar */}
       <nav className="flex justify-between items-center px-8 py-4 bg-[#eef6f9] shadow">
         <h1 className="text-2xl font-bold text-[#3d73a1]">Jheel Saathi</h1>
         <div className="space-x-4">
-          <Link href="/login">
-            <button className="px-4 py-2 rounded-lg border border-[#3d73a1] text-[#3d73a1] hover:bg-blue-50 transition">
-              Login
-            </button>
-          </Link>
-          <Link href="/signup">
-            <button className="px-4 py-2 rounded-lg bg-[#3d73a1] text-white hover:bg-[#1d4ed8] transition">
-              Sign Up
-            </button>
-          </Link>
+          {user ? (
+            <>
+              <span className="text-[#3d73a1] font-medium">
+                Welcome, {user.username}!
+              </span>
+              <button 
+                onClick={logout}
+                className="px-4 py-2 rounded-lg border border-[#3d73a1] text-[#3d73a1] hover:bg-blue-50 transition"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <button className="px-4 py-2 rounded-lg border border-[#3d73a1] text-[#3d73a1] hover:bg-blue-50 transition">
+                  Login
+                </button>
+              </Link>
+              <Link href="/signup">
+                <button className="px-4 py-2 rounded-lg bg-[#3d73a1] text-white hover:bg-[#1d4ed8] transition">
+                  Sign Up
+                </button>
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 

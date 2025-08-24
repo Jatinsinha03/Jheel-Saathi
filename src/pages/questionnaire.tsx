@@ -14,6 +14,12 @@ interface QuestionnaireFormData {
   generalNotes: string;
 }
 
+interface AISummary {
+  summary: string;
+  generatedAt: string;
+  isLoading: boolean;
+}
+
 export default function QuestionnairePage() {
   const router = useRouter();
   const { waterBodyId, waterBodyName } = router.query;
@@ -34,6 +40,13 @@ export default function QuestionnairePage() {
   // Fetch previous questionnaires for this water body
   const [previousQuestionnaires, setPreviousQuestionnaires] = useState<QuestionnaireFormData[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState<AISummary>({
+    summary: '',
+    generatedAt: '',
+    isLoading: false
+  });
 
   useEffect(() => {
     if (waterBodyId) {
@@ -41,6 +54,13 @@ export default function QuestionnairePage() {
       fetchPreviousQuestionnaires();
     }
   }, [waterBodyId]);
+
+  useEffect(() => {
+    // Generate AI summary whenever previous questionnaires change
+    if (previousQuestionnaires.length > 0 && waterBodyId && waterBodyName) {
+      generateAISummary();
+    }
+  }, [previousQuestionnaires, waterBodyId, waterBodyName]);
 
   const fetchPreviousQuestionnaires = async () => {
     try {
@@ -54,6 +74,44 @@ export default function QuestionnairePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateAISummary = async () => {
+    if (!waterBodyId || !waterBodyName) return;
+    
+    setAiSummary(prev => ({ ...prev, isLoading: true }));
+    
+    try {
+      const response = await fetch('/api/generate-ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          waterBodyId,
+          waterBodyName,
+          previousAssessments: previousQuestionnaires
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiSummary({
+          summary: data.summary,
+          generatedAt: data.generatedAt,
+          isLoading: false
+        });
+      } else {
+        console.error('Failed to generate AI summary');
+        setAiSummary(prev => ({ ...prev, isLoading: false }));
+      }
+    } catch (error) {
+      console.error('Error generating AI summary:', error);
+      setAiSummary(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Format AI summary for better display
+  const formatAISummary = (summary: string) => {
+    return summary.replace(/\*\*(.*?)\*\*/g, '$1'); // Remove markdown bold formatting
   };
 
   const vegetationOptions = [
@@ -179,7 +237,7 @@ export default function QuestionnairePage() {
       )}
 
       {/* Previous Questionnaire Summary */}
-      {!loading && previousQuestionnaires.length > 0 && (
+      {!loading && previousQuestionnaires.length > 0 ? (
         <div style={{ 
           backgroundColor: '#eef6f9', 
           borderRadius: '12px', 
@@ -233,7 +291,99 @@ export default function QuestionnairePage() {
             </div>
           )}
         </div>
+      ) : !loading && (
+        <div style={{ 
+          backgroundColor: '#eef6f9', 
+          borderRadius: '12px', 
+          padding: '24px', 
+          marginBottom: '32px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e5e7eb'
+        }}>
+          <h3 style={{ color: '#1f2937', fontSize: '1.25rem', fontWeight: '600', marginBottom: '16px' }}>
+            📊 No Previous Assessments
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+            This lake doesn't have any previous assessments yet. Be the first to submit an assessment!
+          </p>
+        </div>
       )}
+
+             {/* AI Summary Section - Only show when there are previous assessments */}
+       {!loading && previousQuestionnaires.length > 0 && (
+         <>
+           {aiSummary.isLoading ? (
+         <div style={{ 
+           backgroundColor: '#eef6f9', 
+           borderRadius: '12px', 
+           padding: '24px', 
+           marginBottom: '32px',
+           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+           border: '1px solid #e5e7eb'
+         }}>
+           <h3 style={{ color: '#1f2937', fontSize: '1.25rem', fontWeight: '600', marginBottom: '16px' }}>
+             🤖 Generating AI Summary...
+           </h3>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <div style={{
+               width: '20px',
+               height: '20px',
+               border: '2px solid #e5e7eb',
+               borderTop: '2px solid #10b981',
+               borderRadius: '50%',
+               animation: 'spin 1s linear infinite'
+             }}></div>
+             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+               Please wait while we process the data to generate an insightful summary.
+             </p>
+           </div>
+         </div>
+      ) : aiSummary.summary ? (
+        <div style={{ 
+          backgroundColor: '#eef6f9', 
+          borderRadius: '12px', 
+          padding: '24px', 
+          marginBottom: '32px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e5e7eb'
+        }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+             <h3 style={{ color: '#1f2937', fontSize: '1.25rem', fontWeight: '600' }}>
+               AI Summary for {waterBodyName}
+             </h3>
+             <button
+               onClick={generateAISummary}
+               disabled={aiSummary.isLoading}
+               style={{
+                 backgroundColor: '#10b981',
+                 color: 'white',
+                 border: 'none',
+                 borderRadius: '6px',
+                 padding: '8px 16px',
+                 cursor: aiSummary.isLoading ? 'not-allowed' : 'pointer',
+                 fontSize: '14px',
+                 fontWeight: '500',
+                 opacity: aiSummary.isLoading ? 0.6 : 1
+               }}
+             >
+               {aiSummary.isLoading ? 'Generating...' : '🔄 Refresh'}
+             </button>
+           </div>
+          <div style={{ 
+            color: '#374151', 
+            fontSize: '1rem', 
+            lineHeight: '1.6',
+            whiteSpace: 'pre-line'
+          }}>
+            {formatAISummary(aiSummary.summary)}
+          </div>
+          <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '8px' }}>
+            Generated on: {new Date(aiSummary.generatedAt).toLocaleDateString()}
+          </p>
+        </div>
+      ) : null}
+         </>
+       )}
 
       <div style={{ 
         backgroundColor: '#eef6f9', 
