@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '../../generated/prisma';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -49,18 +47,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         generalNotes,
         userLatitude,
         userLongitude,
-        userName
+        userId
       } = req.body;
 
-      if (!waterBodyId || waterClarityRating === undefined || vegetationDensity === undefined) {
+      if (!waterBodyId || waterClarityRating === undefined || vegetationDensity === undefined || !userId) {
         return res.status(400).json({ 
-          error: 'Missing required fields: waterBodyId, waterClarityRating, vegetationDensity' 
+          error: 'Missing required fields: waterBodyId, waterClarityRating, vegetationDensity, userId' 
         });
       }
 
       const questionnaire = await prisma.waterBodyQuestionnaire.create({
         data: {
           waterBodyId,
+          userId,
           waterClarityRating: parseInt(waterClarityRating),
           fishPresence: Boolean(fishPresence),
           birdPresence: Boolean(birdPresence),
@@ -70,8 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           vegetationTypes: Array.isArray(vegetationTypes) ? vegetationTypes : [],
           generalNotes,
           userLatitude: userLatitude ? parseFloat(userLatitude) : null,
-          userLongitude: userLongitude ? parseFloat(userLongitude) : null,
-          userName
+          userLongitude: userLongitude ? parseFloat(userLongitude) : null
         }
       });
 

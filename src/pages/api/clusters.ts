@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '../../generated/prisma';
+import { prisma } from '../../lib/prisma';
 import Supercluster from 'supercluster';
-
-const prisma = new PrismaClient();
 
 type GeoJSONFeature = {
   type: 'Feature';

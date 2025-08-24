@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuth } from '../contexts/AuthContext';
 
 interface QuestionnaireFormData {
   waterBodyId: string;
@@ -11,13 +12,13 @@ interface QuestionnaireFormData {
   vegetationDensity: number;
   vegetationTypes: string[];
   generalNotes: string;
-  userName: string;
 }
 
 export default function QuestionnairePage() {
   const router = useRouter();
   const { waterBodyId, waterBodyName } = router.query;
   
+  const { user } = useAuth();
   const [formData, setFormData] = useState<QuestionnaireFormData>({
     waterBodyId: waterBodyId as string || '',
     waterClarityRating: 3,
@@ -27,8 +28,7 @@ export default function QuestionnairePage() {
     biodiversityNotes: '',
     vegetationDensity: 3,
     vegetationTypes: [],
-    generalNotes: '',
-    userName: ''
+    generalNotes: ''
   });
 
   // Fetch previous questionnaires for this water body
@@ -62,16 +62,29 @@ export default function QuestionnairePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      alert('Please log in to submit a questionnaire.');
+      router.push('/login');
+      return;
+    }
+
     try {
       const response = await fetch('/api/questionnaires', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          userId: user.id
+        }),
       });
 
       if (response.ok) {
         alert('Questionnaire submitted successfully!');
         router.push('/');
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Error submitting questionnaire. Please try again.');
       }
     } catch (error) {
       console.error('Error submitting questionnaire:', error);
@@ -111,21 +124,64 @@ export default function QuestionnairePage() {
 
   const popularAnswers = getPopularAnswers();
 
+  // Redirect if not logged in
+  if (!user) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#bbdde1',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '40px',
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ color: '#1f2937', marginBottom: '16px' }}>
+            🔒 Authentication Required
+          </h2>
+          <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            Please log in to access the questionnaire.
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px', backgroundColor: '#bbdde1', minHeight: '100vh' }}>
       <h1 style={{ color: '#1f2937', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
-        🌊 Water Body Questionnaire
+        Water Body Questionnaire
       </h1>
       {waterBodyName && (
-        <h2 style={{ color: '#374151', fontSize: '1.5rem', fontWeight: '600', marginBottom: '2rem', textAlign: 'center' }}>
-          For: {waterBodyName}
+        <h2 style={{ color: '#3d73a1', fontSize: '2.2rem', fontWeight: '600', marginBottom: '2rem', textAlign: 'center' }}>
+          {waterBodyName}
         </h2>
       )}
 
       {/* Previous Questionnaire Summary */}
       {!loading && previousQuestionnaires.length > 0 && (
         <div style={{ 
-          backgroundColor: 'white', 
+          backgroundColor: '#eef6f9', 
           borderRadius: '12px', 
           padding: '24px', 
           marginBottom: '32px',
@@ -133,7 +189,7 @@ export default function QuestionnairePage() {
           border: '1px solid #e5e7eb'
         }}>
           <h3 style={{ color: '#1f2937', fontSize: '1.25rem', fontWeight: '600', marginBottom: '16px' }}>
-            📊 Previous Assessments Summary ({popularAnswers?.totalResponses} responses)
+            Previous Assessments Summary ({popularAnswers?.totalResponses} responses)
           </h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
@@ -180,37 +236,17 @@ export default function QuestionnairePage() {
       )}
 
       <div style={{ 
-        backgroundColor: 'white', 
+        backgroundColor: '#eef6f9', 
         borderRadius: '12px', 
         padding: '32px',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
         border: '1px solid #e5e7eb'
       }}>
         <h3 style={{ color: '#1f2937', fontSize: '1.5rem', fontWeight: '600', marginBottom: '24px' }}>
-          📝 Submit Your Assessment
+          Submit Your Assessment
         </h3>
         
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={formData.userName}
-              onChange={(e) => setFormData(prev => ({ ...prev, userName: e.target.value }))}
-              style={{ 
-                width: '100%', 
-                padding: '12px', 
-                border: '1px solid #d1d5db', 
-                borderRadius: '8px',
-                fontSize: '16px',
-                color: '#374151',
-                backgroundColor: 'white'
-              }}
-              placeholder="Enter your name (optional)"
-            />
-          </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>

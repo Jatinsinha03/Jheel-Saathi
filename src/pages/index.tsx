@@ -12,7 +12,7 @@ interface Questionnaire {
   vegetationDensity: number;
   vegetationTypes: string[];
   generalNotes: string;
-  userName: string;
+  userId: string;
   createdAt: string;
 }
 
@@ -303,7 +303,7 @@ export default function WaterBodyMap() {
       {selectedWaterBody && (
         <div style={{
           width: '400px',
-          backgroundColor: 'white',
+          backgroundColor: '#bbdde1',
           borderLeft: '1px solid #e5e7eb',
           overflowY: 'auto',
           boxShadow: '-4px 0 12px rgba(0,0,0,0.1)'
@@ -319,7 +319,7 @@ export default function WaterBodyMap() {
               <h2 style={{ 
                 margin: 0, 
                 color: '#1f2937', 
-                fontSize: '1.5rem', 
+                fontSize: '2rem', 
                 fontWeight: '600' 
               }}>
                 {selectedWaterBody.name}
@@ -370,7 +370,7 @@ export default function WaterBodyMap() {
                   fontWeight: '600', 
                   marginBottom: '16px' 
                 }}>
-                  📊 Community Insights ({selectedWaterBody.questionnaires.length} assessments)
+                  Last Insight
                 </h3>
                 
                 {(() => {
@@ -411,7 +411,7 @@ export default function WaterBodyMap() {
                             fontWeight: '600', 
                             marginBottom: '8px' 
                           }}>
-                            📝 Recent Observations
+                            Recent Observations
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {insights.topNotes.map((note, index) => (
@@ -442,7 +442,7 @@ export default function WaterBodyMap() {
                 href={`/questionnaire?waterBodyId=${selectedWaterBody.id}&waterBodyName=${encodeURIComponent(selectedWaterBody.name)}`}
                 style={{
                   flex: 1,
-                  backgroundColor: '#10b981',
+                  backgroundColor: '#3d73a1',
                   color: 'white',
                   textDecoration: 'none',
                   padding: '12px 20px',
@@ -455,7 +455,7 @@ export default function WaterBodyMap() {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
               >
-                📝 Add Assessment
+                Take Questionnaire 
               </a>
             </div>
           </div>
