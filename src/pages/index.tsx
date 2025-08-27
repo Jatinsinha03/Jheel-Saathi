@@ -1,797 +1,216 @@
-import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+"use client";
 
-interface Questionnaire {
-  id: string;
-  waterClarityRating: number;
-  fishPresence: boolean;
-  birdPresence: boolean;
-  otherWildlife: boolean;
-  biodiversityNotes: string;
-  vegetationDensity: number;
-  vegetationTypes: string[];
-  generalNotes: string;
-  userId: string;
-  createdAt: string;
-}
+import React from "react";
+import Link from "next/link";
+import { useAuth } from '../contexts/AuthContext';
 
-interface WaterBody {
-  id: string;
-  name: string;
-  description?: string;
-  latitude: number;
-  longitude: number;
-  questionnaires?: Questionnaire[];
-}
-
-interface WaterBodyDetails {
-  id: string;
-  name: string;
-  description?: string;
-  questionnaires?: Questionnaire[];
-}
-
-interface AISummary {
-  summary: string;
-  generatedAt: string;
-  isLoading: boolean;
-}
-
-export default function WaterBodyMap() {
-  const mapContainer = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [waterBodies, setWaterBodies] = useState<WaterBody[]>([]);
-  const [selectedWaterBody, setSelectedWaterBody] = useState<WaterBodyDetails | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<WaterBody[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    latitude: '',
-    longitude: '',
-    description: ''
-  });
-
-  // AI Summary state
-  const [aiSummary, setAiSummary] = useState<AISummary>({
-    summary: '',
-    generatedAt: '',
-    isLoading: false
-  });
-
-  // Fetch water bodies
-  const fetchWaterBodies = async () => {
-    try {
-      const response = await fetch('/api/water-bodies');
-      if (response.ok) {
-        const data = await response.json();
-        setWaterBodies(data);
-      }
-    } catch (error) {
-      console.error('Error fetching water bodies:', error);
-    }
-  };
-
-  // Add new water body
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/water-bodies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setShowAddForm(false);
-        setFormData({ name: '', latitude: '', longitude: '', description: '' });
-        fetchWaterBodies();
-      }
-    } catch (error) {
-      console.error('Error adding water body:', error);
-    }
-  };
-
-  // Get current location
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData(prev => ({
-            ...prev,
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString()
-          }));
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          alert('Unable to get your location. Please enter coordinates manually.');
-        }
-      );
-    } else {
-      alert('Geolocation is not supported by this browser.');
-    }
-  };
-
-  // Search functionality
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim() === '') {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
-    }
-
-    const filtered = waterBodies.filter(waterBody =>
-      waterBody.name.toLowerCase().includes(query.toLowerCase()) ||
-      (waterBody.description && waterBody.description.toLowerCase().includes(query.toLowerCase()))
-    );
-    setSearchResults(filtered);
-    setShowSearchResults(true);
-  };
-
-  const handleSearchResultClick = (waterBody: WaterBody) => {
-    setSelectedWaterBody(waterBody);
-    setShowSearchResults(false);
-    setSearchQuery(waterBody.name);
-    
-    // Fly to the water body on the map
-    if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: [waterBody.longitude, waterBody.latitude],
-        zoom: 15,
-        duration: 2000
-      });
-    }
-  };
-
-  // Calculate community insights
-  const getCommunityInsights = (questionnaires: Questionnaire[] = []) => {
-    if (questionnaires.length === 0) return null;
-
-    const clarityRatings = questionnaires.map(q => q.waterClarityRating);
-    const vegetationDensities = questionnaires.map(q => q.vegetationDensity);
-    
-    const avgClarity = Math.round(clarityRatings.reduce((a, b) => a + b, 0) / clarityRatings.length);
-    const avgVegetation = Math.round(vegetationDensities.reduce((a, b) => a + b, 0) / vegetationDensities.length);
-    
-    const fishCount = questionnaires.filter(q => q.fishPresence).length;
-    const birdCount = questionnaires.filter(q => q.birdPresence).length;
-    const wildlifeCount = questionnaires.filter(q => q.otherWildlife).length;
-    
-    const allNotes = questionnaires
-      .filter(q => q.generalNotes && q.generalNotes.trim())
-      .map(q => q.generalNotes)
-      .slice(0, 5);
-
-    return {
-      avgClarity,
-      avgVegetation,
-      fishCount,
-      birdCount,
-      wildlifeCount,
-      totalResponses: questionnaires.length,
-      topNotes: allNotes
-    };
-  };
-
-  // Generate AI summary for selected water body
-  const generateAISummary = async (waterBody: WaterBodyDetails) => {
-    if (!waterBody.questionnaires || waterBody.questionnaires.length === 0) return;
-    
-    setAiSummary(prev => ({ ...prev, isLoading: true }));
-    
-    try {
-      const response = await fetch('/api/generate-ai-summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          waterBodyId: waterBody.id,
-          waterBodyName: waterBody.name,
-          previousAssessments: waterBody.questionnaires
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAiSummary({
-          summary: data.summary,
-          generatedAt: data.generatedAt,
-          isLoading: false
-        });
-      } else {
-        console.error('Failed to generate AI summary');
-        setAiSummary(prev => ({ ...prev, isLoading: false }));
-      }
-    } catch (error) {
-      console.error('Error generating AI summary:', error);
-      setAiSummary(prev => ({ ...prev, isLoading: false }));
-    }
-  };
-
-  // Format AI summary to show only first 5-6 lines
-  const formatAISummary = (summary: string) => {
-    const lines = summary.split('\n').filter(line => line.trim());
-    const firstLines = lines.slice(0, 6);
-    return firstLines.join('\n');
-  };
-
-  useEffect(() => {
-    fetchWaterBodies();
-  }, []);
-
-  // Generate AI summary when water body is selected
-  useEffect(() => {
-    if (selectedWaterBody && selectedWaterBody.questionnaires && selectedWaterBody.questionnaires.length > 0) {
-      generateAISummary(selectedWaterBody);
-    } else {
-      setAiSummary({ summary: '', generatedAt: '', isLoading: false });
-    }
-  }, [selectedWaterBody]);
-
-  useEffect(() => {
-    if (!mapContainer.current) return;
-
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
-      center: [-98.5795, 39.8283],
-      zoom: 4,
-    });
-
-    mapRef.current = map;
-
-    map.on('load', () => {
-      // Add water body markers
-      waterBodies.forEach(waterBody => {
-        const marker = new maplibregl.Marker({ color: '#10b981' })
-          .setLngLat([waterBody.longitude, waterBody.latitude])
-          .addTo(map);
-
-        // Add click event to marker
-        marker.getElement().addEventListener('click', () => {
-          setSelectedWaterBody(waterBody);
-        });
-      });
-    });
-  }, [waterBodies]);
+export default function LandingPage() {
+  const { user, logout } = useAuth();
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', display: 'flex' }}>
-      {/* Left side - Map and Controls */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        {/* Add Water Body Button */}
-        <button
-          onClick={() => setShowAddForm(true)}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            zIndex: 1000,
-            backgroundColor: '#10b981',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '12px 20px',
-            fontSize: '16px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-        >
-          🌊 Add Water Body
-        </button>
+    <div className="min-h-screen bg-[#bbdde1] flex flex-col font-sans">
+      {/* Navbar */}
+      <nav className="flex justify-between items-center px-8 py-4 bg-[#eef6f9] shadow">
+        <h1 className="text-2xl font-bold text-[#3d73a1]">Jheel Saathi</h1>
+        <div className="space-x-4">
+          {user ? (
+            <>
+              <span className="text-[#3d73a1] font-medium">
+                Welcome, {user.username}!
+              </span>
+              <button 
+                onClick={logout}
+                className="px-4 py-2 rounded-lg border border-[#3d73a1] text-[#3d73a1] hover:bg-blue-50 transition"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <button className="px-4 py-2 rounded-lg border border-[#3d73a1] text-[#3d73a1] hover:bg-blue-50 transition">
+                  Login
+                </button>
+              </Link>
+              <Link href="/signup">
+                <button className="px-4 py-2 rounded-lg bg-[#3d73a1] text-white hover:bg-[#1d4ed8] transition">
+                  Sign Up
+                </button>
+              </Link>
+            </>
+          )}
+        </div>
+      </nav>
 
-        {/* Search Bar */}
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '220px',
-          zIndex: 1000,
-          width: '300px'
-        }}>
-          <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search water bodies..."
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              fontSize: '16px',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              outline: 'none',
-              transition: 'border-color 0.2s ease',
-              backgroundColor: '#f3f4f6',   // light gray background
-              color: '#111827'              // dark text color
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#10b981'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-          />
+      {/* Hero Section */}
+      <header className="flex flex-col md:flex-row items-center justify-between px-10 py-16 fade-up">
+        <div className="max-w-lg">
+          <h2 className="text-4xl font-semibold text-[#0f172a] leading-tight">
+            Understand the Ecological Health of Your Lakes
+          </h2>
+          <p className="mt-4 text-lg text-[#334155]">
+            A community platform empowering citizens to assess neighborhood water bodies.
+          </p>
+          <Link href='/map'>
+          <button className="mt-6 px-6 py-3 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+            Get Started
+          </button>
+          </Link>
+        </div>
+        <div className="w-full h-64 md:h-80 bg-[#e2e8f0] rounded-xl mt-8 md:mt-0 md:ml-10 flex items-center justify-center">
+        <img 
+          src="/first.jpg" 
+          alt="Lake illustration" 
+          className="object-cover w-full h-full rounded-xl" 
+        />
+        </div>
+      </header>
 
-            
-            {/* Search Results Dropdown */}
-            {showSearchResults && searchResults.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'white',
-                border: '2px solid #e5e7eb',
-                borderTop: 'none',
-                borderRadius: '0 0 8px 8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                maxHeight: '300px',
-                overflowY: 'auto',
-                zIndex: 1001
-              }}>
-                {searchResults.map((waterBody, index) => (
-                  <div
-                    key={waterBody.id}
-                    onClick={() => handleSearchResultClick(waterBody)}
-                    style={{
-                      padding: '12px 16px',
-                      cursor: 'pointer',
-                      borderBottom: index < searchResults.length - 1 ? '1px solid #f3f4f6' : 'none',
-                      transition: 'background-color 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                  >
-                    <div style={{ fontWeight: '500', color: '#1f2937' }}>{waterBody.name}</div>
-                    {waterBody.description && (
-                      <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-                        {waterBody.description.substring(0, 60)}...
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* Features Section */}
+      <section className="px-10 py-12 bg-[#eef6f9] fade-left">
+        <h3 className="text-2xl font-bold text-[#3d73a1] mb-6">Answer Simple Questions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 border rounded-lg bg-[#bbdde1] shadow-sm hover:shadow-md transition">
+            <div className="w-full h-32 bg-[#e2e8f0] rounded mb-4 flex items-center justify-center">
+            <img 
+              src="/second.jpg" 
+              alt="Lake illustration" 
+              className="object-cover w-full h-full rounded-xl" 
+            />
+            </div>
+            <h4 className="text-lg font-semibold text-[#1e293b]">Water clarity</h4>
+            <p className="text-[#64748b] text-sm">How clear is the water?</p>
+          </div>
+
+          <div className="p-6 border rounded-lg bg-[#bbdde1] shadow-sm hover:shadow-md transition">
+            <div className="w-full h-32 bg-[#e2e8f0] rounded mb-4 flex items-center justify-center">
+            <img 
+              src="/third.jpg" 
+              alt="Lake illustration" 
+              className="object-cover w-full h-full rounded-xl" 
+            />
+            </div>
+            <h4 className="text-lg font-semibold text-[#1e293b]">Biodiversity presence</h4>
+            <p className="text-[#64748b] text-sm">What wildlife is present?</p>
+          </div>
+
+          <div className="p-6 border rounded-lg bg-[#bbdde1] shadow-sm hover:shadow-md transition">
+            <div className="w-full h-32 bg-[#e2e8f0] rounded mb-4 flex items-center justify-center">
+            <img 
+              src="/fourth.png" 
+              alt="Lake illustration" 
+              className="object-cover w-full h-full rounded-xl" 
+            />
+            </div>
+            <h4 className="text-lg font-semibold text-[#1e293b]">Vegetation around the lake</h4>
+            <p className="text-[#64748b] text-sm">Is there vegetation nearby?</p>
           </div>
         </div>
+      </section>
 
-        {/* Map Container */}
-        <div id="map" ref={mapContainer} style={{ width: '100%', height: '100vh' }} />
+      {/* New Interactive Section */}
+      <section className="px-10 py-16 bg-[#bbdde1] ">
+  <h3 className="text-3xl font-bold text-[#0f172a] mb-10 text-center">Explore & Contribute</h3>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    
+    {/* Interactive Map */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Interactive Map</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          View all lakes on an interactive map. Click on any lake to begin a questionnaire and assess its ecological health.
+        </p>
       </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/map">
+          Open Map
+        </Link>
+      </button>
+    </div>
 
-      {/* Right side - Water Body Details Panel */}
-      {selectedWaterBody && (
-        <div style={{
-          width: '400px',
-          backgroundColor: '#bbdde1',
-          borderLeft: '1px solid #e5e7eb',
-          overflowY: 'auto',
-          boxShadow: '-4px 0 12px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ padding: '24px' }}>
-            {/* Header */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <h2 style={{ 
-                margin: 0, 
-                color: '#1f2937', 
-                fontSize: '2rem', 
-                fontWeight: '600' 
-              }}>
-                {selectedWaterBody.name}
-              </h2>
-              <button
-                onClick={() => setSelectedWaterBody(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  padding: '4px'
-                }}
-              >
-                ×
-              </button>
-            </div>
+    {/* Add a Water Body */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Add a Water Body</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          Use your current location to add new lakes, ponds, or water bodies that are not yet on the map.
+        </p>
+      </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/map">
+          Add Water Body
+        </Link>
+      </button>
+    </div>
 
-            {/* Description */}
-            {selectedWaterBody.description && (
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ 
-                  color: '#374151', 
-                  fontSize: '1rem', 
-                  fontWeight: '600', 
-                  marginBottom: '8px' 
-                }}>
-                  Description
-                </h3>
-                <p style={{ 
-                  color: '#6b7280', 
-                  fontSize: '14px', 
-                  lineHeight: '1.5',
-                  margin: 0
-                }}>
-                  {selectedWaterBody.description}
-                </p>
-              </div>
-            )}
+    {/* Leaderboard */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Leaderboard</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          Track contributions and see who has completed the most reviews in your community.
+        </p>
+      </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/leaderboard">
+          View Leaderboard
+        </Link>
+      </button>
+    </div>
 
-            {/* Community Insights */}
-            {selectedWaterBody.questionnaires && selectedWaterBody.questionnaires.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ 
-                  color: '#374151', 
-                  fontSize: '1rem', 
-                  fontWeight: '600', 
-                  marginBottom: '16px' 
-                }}>
-                  Last Insight
-                </h3>
-                
-                {(() => {
-                  const insights = getCommunityInsights(selectedWaterBody.questionnaires);
-                  if (!insights) return null;
+    {/* Take a Quiz */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Take a Quiz</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          Test your knowledge about lakes, biodiversity, and ecological health through fun and engaging quizzes.
+        </p>
+      </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/quiz">
+          Start Quiz
+        </Link>
+      </button>
+    </div>
 
-                  return (
-                    <>
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: '1fr 1fr', 
-                        gap: '12px', 
-                        marginBottom: '20px' 
-                      }}>
-                        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0369a1' }}>{insights.avgClarity}/5</div>
-                          <div style={{ color: '#374151', fontSize: '12px' }}>Avg. Water Clarity</div>
-                        </div>
-                        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#059669' }}>{insights.avgVegetation}/5</div>
-                          <div style={{ color: '#374151', fontSize: '12px' }}>Avg. Vegetation</div>
-                        </div>
-                        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d97706' }}>{insights.fishCount}</div>
-                          <div style={{ color: '#374151', fontSize: '12px' }}>Fish Sightings</div>
-                        </div>
-                        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#fce7f3', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#be185d' }}>{insights.birdCount}</div>
-                          <div style={{ color: '#374151', fontSize: '12px' }}>Bird Sightings</div>
-                        </div>
-                      </div>
+    {/* Generate Report with Gemini */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Generate Report</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          Use Gemini 2.0 Flash to generate insightful reports on lake conditions and learn how you can contribute to conservation efforts.
+        </p>
+      </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/map">
+          Generate Report
+        </Link>
+      </button>
+    </div>
 
-                      {insights.topNotes && insights.topNotes.length > 0 && (
-                        <div>
-                          <h4 style={{ 
-                            color: '#374151', 
-                            fontSize: '0.875rem', 
-                            fontWeight: '600', 
-                            marginBottom: '8px' 
-                          }}>
-                            Recent Observations
-                          </h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {insights.topNotes.map((note, index) => (
-                                                             <div key={index} style={{ 
-                                 padding: '8px', 
-                                 backgroundColor: '#f9fafb', 
-                                 borderRadius: '4px',
-                                 border: '1px solid #e5e7eb',
-                                 color: '#374151',
-                                 fontSize: '12px',
-                                 lineHeight: '1.4'
-                               }}>
-                                 &ldquo;{note}&rdquo;
-                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+    {/* Free Resources */}
+    <div className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition flex flex-col justify-between">
+      <div>
+        <h4 className="text-xl font-semibold text-[#3d73a1] mb-3">Free Resources</h4>
+        <p className="text-[#475569] text-sm mb-6">
+          Access guides, articles, and learning materials to understand more about water ecosystems and sustainable practices.
+        </p>
+      </div>
+      <button className="mt-auto px-4 py-2 bg-[#3d73a1] text-white rounded-lg shadow hover:bg-[#1d4ed8] transition">
+        <Link href="/resources">
+          Explore Resources
+        </Link>
+      </button>
+    </div>
 
-            {/* AI Summary Section */}
-            {selectedWaterBody.questionnaires && selectedWaterBody.questionnaires.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ 
-                  color: '#374151', 
-                  fontSize: '1rem', 
-                  fontWeight: '600', 
-                  marginBottom: '16px' 
-                }}>
-                  AI Summary
-                </h3>
-                
-                {aiSummary.isLoading ? (
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '8px', 
-                    padding: '16px',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid #e5e7eb',
-                        borderTop: '2px solid #10b981',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                      <span style={{ color: '#6b7280', fontSize: '14px' }}>
-                        Generating AI summary...
-                      </span>
-                    </div>
-                  </div>
-                ) : aiSummary.summary ? (
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '8px', 
-                    padding: '16px',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <div style={{ 
-                      color: '#374151', 
-                      fontSize: '14px', 
-                      lineHeight: '1.5',
-                      whiteSpace: 'pre-line'
-                    }}>
-                      {formatAISummary(aiSummary.summary)}
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      marginTop: '12px'
-                    }}>
-                      <span style={{ color: '#6b7280', fontSize: '12px' }}>
-                        Generated: {new Date(aiSummary.generatedAt).toLocaleDateString()}
-                      </span>
-                      <button
-                        onClick={() => generateAISummary(selectedWaterBody)}
-                        disabled={aiSummary.isLoading}
-                        style={{
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '6px 12px',
-                          cursor: aiSummary.isLoading ? 'not-allowed' : 'pointer',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          opacity: aiSummary.isLoading ? 0.6 : 1
-                        }}
-                      >
-                        🔄 Refresh
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
+  </div>
+</section>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <a
-                href={`/questionnaire?waterBodyId=${selectedWaterBody.id}&waterBodyName=${encodeURIComponent(selectedWaterBody.name)}`}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#3d73a1',
-                  color: 'white',
-                  textDecoration: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                  fontWeight: '500',
-                  fontSize: '16px',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-              >
-                Take Questionnaire 
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Add Water Body Form Modal */}
-      {showAddForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 2000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}>
-            <h2 style={{ margin: '0 0 24px 0', color: '#1f2937', fontSize: '1.5rem', fontWeight: '600' }}>
-              Add New Water Body
-            </h2>
-            
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '16px' }}>
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    marginTop: '4px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    color: '#374151',
-                    backgroundColor: 'white'
-                  }}
-                  placeholder="e.g., Crystal Lake"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={getCurrentLocation}
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 20px',
-                  marginBottom: '16px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-              >
-                📍 Use Current Location
-              </button>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '16px' }}>
-                    Latitude *
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.latitude}
-                    onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
-                    required
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      marginTop: '4px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      color: '#374151',
-                      backgroundColor: 'white'
-                    }}
-                    placeholder="e.g., 39.0968"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '16px' }}>
-                    Longitude *
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.longitude}
-                    onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
-                    required
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      marginTop: '4px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      color: '#374151',
-                      backgroundColor: 'white'
-                    }}
-                    placeholder="e.g., -120.0324"
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '16px' }}>
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    marginTop: '4px', 
-                    minHeight: '80px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    color: '#374151',
-                    backgroundColor: 'white',
-                    resize: 'vertical'
-                  }}
-                  placeholder="Describe the water body..."
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(false)}
-                  style={{
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '12px 24px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '12px 24px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-                >
-                  Add Water Body
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Footer */}
+      <footer className="px-10 py-6 bg-[#eef6f9] shadow-inner text-center text-[#3d73a1] text-sm">
+        © {new Date().getFullYear()} Jheel Saathi. All rights reserved.
+      </footer>
     </div>
   );
 }

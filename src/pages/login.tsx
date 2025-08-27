@@ -27,7 +27,7 @@ export default function LoginPage() {
       if (response.ok) {
         const userData = await response.json();
         login(userData);
-        router.push('/');
+        router.push('/map');
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Login failed');

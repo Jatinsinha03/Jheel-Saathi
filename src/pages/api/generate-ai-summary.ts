@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Prepare the prompt for AI summary generation
     const prompt = `
-You are an environmental expert analyzing lake assessment data. Generate a concise, well-formatted summary based on the following data:
+You are an environmental expert analyzing lake assessment data. Generate a comprehensive, well-formatted summary and conservation recommendations based on the following data:
 
 Lake Name: ${waterBodyName}
 Total Assessments: ${previousAssessments?.length || 0}
@@ -39,13 +39,18 @@ Assessment ${index + 1}:
 - General Notes: ${assessment.generalNotes || 'None'}
 `).join('\n')}
 
-Please provide a concise summary (5-6 lines maximum) that includes:
-1. Brief overview of the lake's ecological status
-2. Key findings about water quality and biodiversity
-3. Notable observations or trends
-4. Overall health assessment
+Please provide a comprehensive analysis in the following format:
 
-Format the response with clear line breaks and concise sentences. Make it easy to read and understand for both environmentalists and general public.
+LAKE HEALTH SUMMARY:
+[Provide a concise summary (4-5 lines) of the lake's ecological status, water quality, biodiversity, and overall health assessment]
+
+CONSERVATION RECOMMENDATIONS:
+[Provide 3-4 specific, actionable recommendations for protecting and improving this water body. Focus on practical steps that individuals and communities can take]
+
+HOW YOU CAN CONTRIBUTE:
+[Provide 3-4 specific ways that users can personally contribute to the conservation of this water body, including citizen science opportunities, community involvement, and individual actions]
+
+Format the response with clear sections and bullet points for recommendations. Make it engaging, practical, and actionable for both environmentalists and the general public. Keep each section concise but informative.
 `;
 
     // Generate content using Gemini

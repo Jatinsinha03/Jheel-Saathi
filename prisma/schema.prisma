@@ -24,6 +24,7 @@ model User {
   
   // Relations
   questionnaires WaterBodyQuestionnaire[]
+  quizAttempts   QuizAttempt[]
   
   @@map("users")
 }
@@ -76,4 +77,35 @@ model WaterBodyQuestionnaire {
   updatedAt          DateTime @updatedAt
   
   @@map("water_body_questionnaires")
+}
+
+model QuizQuestion {
+  id          String   @id @default(cuid())
+  question    String
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  correctAnswer String
+  explanation String?
+  category    String   // e.g., "water_quality", "biodiversity", "conservation"
+  difficulty  String   // "easy", "medium", "hard"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  score       Int      // Score out of 10
+  totalQuestions Int   // Should be 10
+  answers     Json     // Store user's answers
+  completedAt DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("quiz_attempts")
 }

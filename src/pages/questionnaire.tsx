@@ -48,6 +48,30 @@ export default function QuestionnairePage() {
     isLoading: false
   });
 
+  // Print functionality
+  const handlePrint = () => {
+    const printContent = document.getElementById('print-content');
+    if (printContent) {
+      const originalContents = document.body.innerHTML;
+      document.body.innerHTML = printContent.innerHTML;
+      window.print();
+      document.body.innerHTML = originalContents;
+      window.location.reload();
+    }
+  };
+
+  // Print empty questionnaire
+  const handlePrintEmptyQuestionnaire = () => {
+    const printContent = document.getElementById('print-empty-questionnaire');
+    if (printContent) {
+      const originalContents = document.body.innerHTML;
+      document.body.innerHTML = printContent.innerHTML;
+      window.print();
+      document.body.innerHTML = originalContents;
+      window.location.reload();
+    }
+  };
+
   useEffect(() => {
     if (waterBodyId) {
       setFormData(prev => ({ ...prev, waterBodyId: waterBodyId as string }));
@@ -227,14 +251,36 @@ export default function QuestionnairePage() {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px', backgroundColor: '#bbdde1', minHeight: '100vh' }}>
-      <h1 style={{ color: '#1f2937', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
-        Water Body Questionnaire
-      </h1>
-      {waterBodyName && (
-        <h2 style={{ color: '#3d73a1', fontSize: '2.2rem', fontWeight: '600', marginBottom: '2rem', textAlign: 'center' }}>
-          {waterBodyName}
-        </h2>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div>
+          <h1 style={{ color: '#1f2937', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
+            Water Body Questionnaire
+          </h1>
+          {waterBodyName && (
+            <h2 style={{ color: '#3d73a1', fontSize: '2.2rem', fontWeight: '600', marginBottom: '2rem', textAlign: 'center' }}>
+              {waterBodyName}
+            </h2>
+          )}
+        </div>
+        <button
+          onClick={handlePrint}
+          style={{
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 24px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          🖨️ Print Report
+        </button>
+      </div>
 
       {/* Previous Questionnaire Summary */}
       {!loading && previousQuestionnaires.length > 0 ? (
@@ -377,6 +423,100 @@ export default function QuestionnairePage() {
           }}>
             {formatAISummary(aiSummary.summary)}
           </div>
+          
+
+
+          {/* Enhanced display for conservation sections */}
+          {aiSummary.summary && (
+            <div style={{ marginTop: '20px' }}>
+              {/* Lake Health Summary */}
+              {aiSummary.summary.includes('LAKE HEALTH SUMMARY:') && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ 
+                    color: '#1f2937', 
+                    fontSize: '1.1rem', 
+                    fontWeight: '600', 
+                    marginBottom: '12px',
+                    backgroundColor: '#f0f9ff',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    borderLeft: '4px solid #3b82f6'
+                  }}>
+                    🌊 Lake Health Summary
+                  </h4>
+                  <div style={{ 
+                    color: '#374151', 
+                    fontSize: '0.95rem', 
+                    lineHeight: '1.6',
+                    padding: '12px',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    {aiSummary.summary.split('LAKE HEALTH SUMMARY:')[1]?.split('CONSERVATION RECOMMENDATIONS:')[0]?.trim() || 'No summary available'}
+                  </div>
+                </div>
+              )}
+
+              {/* Conservation Recommendations */}
+              {aiSummary.summary.includes('CONSERVATION RECOMMENDATIONS:') && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ 
+                    color: '#1f2937', 
+                    fontSize: '1.1rem', 
+                    fontWeight: '600', 
+                    marginBottom: '12px',
+                    backgroundColor: '#f0fdf4',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    borderLeft: '4px solid #10b981'
+                  }}>
+                    🌱 Conservation Recommendations
+                  </h4>
+                  <div style={{ 
+                    color: '#374151', 
+                    fontSize: '0.95rem', 
+                    lineHeight: '1.6',
+                    padding: '12px',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    {aiSummary.summary.split('CONSERVATION RECOMMENDATIONS:')[1]?.split('HOW YOU CAN CONTRIBUTE:')[0]?.trim() || 'No recommendations available'}
+                  </div>
+                </div>
+              )}
+
+              {/* How You Can Contribute */}
+              {aiSummary.summary.includes('HOW YOU CAN CONTRIBUTE:') && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ 
+                    color: '#1f2937', 
+                    fontSize: '1.1rem', 
+                    fontWeight: '600', 
+                    marginBottom: '12px',
+                    backgroundColor: '#fef3c7',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    borderLeft: '4px solid #f59e0b'
+                  }}>
+                    👥 How You Can Contribute
+                  </h4>
+                  <div style={{ 
+                    color: '#374151', 
+                    fontSize: '0.95rem', 
+                    lineHeight: '1.6',
+                    padding: '12px',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    {aiSummary.summary.split('HOW YOU CAN CONTRIBUTE:')[1]?.trim() || 'No contribution suggestions available'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '8px' }}>
             Generated on: {new Date(aiSummary.generatedAt).toLocaleDateString()}
           </p>
@@ -560,6 +700,22 @@ export default function QuestionnairePage() {
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               type="button"
+              onClick={handlePrintEmptyQuestionnaire}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}
+            >
+              🖨️ Print Form
+            </button>
+            <button
+              type="button"
               onClick={() => router.push('/')}
               style={{
                 backgroundColor: '#6b7280',
@@ -591,6 +747,206 @@ export default function QuestionnairePage() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Print Content - Hidden by default */}
+      <div id="print-content" style={{ display: 'none' }}>
+        <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+          <h1 style={{ color: '#1f2937', fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', textAlign: 'center' }}>
+            Water Body Assessment Report
+          </h1>
+          {waterBodyName && (
+            <h2 style={{ color: '#3d73a1', fontSize: '20px', fontWeight: '600', marginBottom: '20px', textAlign: 'center' }}>
+              {waterBodyName}
+            </h2>
+          )}
+          
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ color: '#1f2937', fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+              Assessment Summary
+            </h3>
+            {popularAnswers && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                  <strong>Average Water Clarity:</strong> {popularAnswers.avgClarity}/5
+                </div>
+                <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                  <strong>Average Vegetation Density:</strong> {popularAnswers.avgVegetation}/5
+                </div>
+                <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                  <strong>Fish Sightings:</strong> {popularAnswers.fishCount}
+                </div>
+                <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                  <strong>Bird Sightings:</strong> {popularAnswers.birdCount}
+                </div>
+              </div>
+            )}
+            <p><strong>Total Responses:</strong> {popularAnswers?.totalResponses || 0}</p>
+          </div>
+
+          {aiSummary.summary && (
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#1f2937', fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+                AI Analysis Summary
+              </h3>
+              <div style={{ 
+                color: '#374151', 
+                fontSize: '14px', 
+                lineHeight: '1.5',
+                whiteSpace: 'pre-line',
+                padding: '12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                backgroundColor: '#f9fafb'
+              }}>
+                {formatAISummary(aiSummary.summary)}
+              </div>
+              <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px' }}>
+                Generated on: {new Date(aiSummary.generatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+
+          <div style={{ marginTop: '30px', borderTop: '2px solid #e5e7eb', paddingTop: '20px' }}>
+            <h3 style={{ color: '#1f2937', fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+              Current Assessment Form
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+              <div>
+                <strong>Water Clarity Rating:</strong> {formData.waterClarityRating}/5
+              </div>
+              <div>
+                <strong>Vegetation Density:</strong> {formData.vegetationDensity}/5
+              </div>
+              <div>
+                <strong>Fish Presence:</strong> {formData.fishPresence ? 'Yes' : 'No'}
+              </div>
+              <div>
+                <strong>Bird Presence:</strong> {formData.birdPresence ? 'Yes' : 'No'}
+              </div>
+              <div>
+                <strong>Other Wildlife:</strong> {formData.otherWildlife ? 'Yes' : 'No'}
+              </div>
+              <div>
+                <strong>Vegetation Types:</strong> {formData.vegetationTypes.join(', ') || 'None'}
+              </div>
+            </div>
+            
+            {formData.biodiversityNotes && (
+              <div style={{ marginTop: '16px' }}>
+                <strong>Biodiversity Notes:</strong>
+                <p style={{ marginTop: '4px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}>
+                  {formData.biodiversityNotes}
+                </p>
+              </div>
+            )}
+            
+            {formData.generalNotes && (
+              <div style={{ marginTop: '16px' }}>
+                <strong>General Notes:</strong>
+                <p style={{ marginTop: '4px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px' }}>
+                  {formData.generalNotes}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
+            <p>Report generated by Jheel Saathi - Lake Conservation Platform</p>
+            <p>Date: {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Print Empty Questionnaire Content - Hidden by default */}
+      <div id="print-empty-questionnaire" style={{ display: 'none' }}>
+        <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+          <h1 style={{ color: '#1f2937', fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', textAlign: 'center' }}>
+            Water Body Assessment Form
+          </h1>
+          {waterBodyName && (
+            <h2 style={{ color: '#3d73a1', fontSize: '20px', fontWeight: '600', marginBottom: '20px', textAlign: 'center' }}>
+              {waterBodyName}
+            </h2>
+          )}
+          
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ color: '#1f2937', fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+              Assessment Form
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>
+              Use this form to assess the health and condition of the water body. Fill in your observations and submit the completed form.
+            </p>
+          </div>
+
+          <div style={{ marginTop: '30px', borderTop: '2px solid #e5e7eb', paddingTop: '20px' }}>
+            <h3 style={{ color: '#1f2937', fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+              Assessment Checklist
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Water Clarity Rating:</strong> ___/5 (1 = Very murky, 5 = Crystal clear)
+              </div>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Vegetation Density:</strong> ___/5 (1 = Sparse, 5 = Dense vegetation)
+              </div>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Fish Presence:</strong> □ Yes □ No
+              </div>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Bird Presence:</strong> □ Yes □ No
+              </div>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Other Wildlife:</strong> □ Yes □ No
+              </div>
+              <div style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                <strong>Vegetation Types:</strong> _________________________________
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <strong>Biodiversity Notes:</strong>
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '12px', 
+                border: '1px solid #e5e7eb', 
+                borderRadius: '6px',
+                minHeight: '60px'
+              }}>
+                _________________________________
+                <br />
+                _________________________________
+                <br />
+                _________________________________
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <strong>General Notes:</strong>
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '12px', 
+                border: '1px solid #e5e7eb', 
+                borderRadius: '6px',
+                minHeight: '80px'
+              }}>
+                _________________________________
+                <br />
+                _________________________________
+                <br />
+                _________________________________
+                <br />
+                _________________________________
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
+            <p>Form generated by Jheel Saathi - Lake Conservation Platform</p>
+            <p>Date: {new Date().toLocaleDateString()}</p>
+            <p>Location: {waterBodyName || 'Water Body'}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
