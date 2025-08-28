@@ -1,6 +1,33 @@
-# Water Body Mapping Application
+# Jheel Saathi
 
-A comprehensive web application for mapping and monitoring water bodies (lakes, rivers, ponds) with environmental assessment questionnaires.
+### Problem Statement
+
+India’s lakes and traditional water bodies are rapidly deteriorating due to unchecked urbanization, sewage discharge, solid-waste dumping, loss of green buffers, and fading community stewardship. Once vital for biodiversity, groundwater recharge, and local livelihoods, these ecosystems now suffer from neglect, pollution, and shrinking water capacity. Scientific lake monitoring remains limited, expensive, and inaccessible to most citizens. There is no simple way for people to assess the health of their neighborhood lake or understand how to help, leaving communities disempowered and restoration efforts under-supported.
+
+Personal experiences with local water bodies such as Girital, Dronasagar, and numerous seasonal streams mirror a nationwide reality: the absence of a scalable, community‑driven system for monitoring, learning, and participating in lake conservation. This gap slows collective action and environmental learning, especially among students and youth who are eager to contribute but lack practical tools and guidance.
+
+### Solution
+
+Jheel Saathi is a web‑based, community‑centered platform that empowers citizens—especially students, youth, and local communities—to understand and evaluate the ecological health of their neighborhood lakes and water bodies. Through an intuitive interface, users answer simple visual and text‑based questions on water clarity, biodiversity presence, vegetation, human activity, and seasonal changes. The platform generates a dynamic, easy‑to‑read Lake Health Report and an AI‑assisted summary with actionable conservation recommendations.
+
+Beyond data collection, Jheel Saathi is a learning experience designed to build ecological literacy and inspire behavioral change. By observing real‑world indicators, users learn concepts such as eutrophication, habitat loss, and pollution through guided, experiential interactions. The platform bridges scientific assessment with citizen participation, making lake monitoring accessible, meaningful, and classroom‑friendly.
+
+### Demo Link - [Demo Link](https://jheel-saathi.vercel.app/)
+### Demo Video Link - [Demo Video Link](https://youtu.be/eTlDFY0aUeY)
+
+### Features
+
+- **Interactive Lake Questionnaire**: Guided, student‑friendly assessment of water clarity, biodiversity, vegetation, and human activity; supports repeat submissions over time.
+- **AI Lake Health Report**: Gemini‑powered analysis summarizing ecological status, trends, conservation recommendations, and “how you can contribute” actions.
+- **Printable Reports & Forms**: One‑click print for completed reports and a clean, blank questionnaire for offline fieldwork.
+- **Map‑Based Explorer**: View and select lakes/water bodies, see recent observations and community insights.
+- **Community Insights**: Aggregated metrics (e.g., average clarity, vegetation density, sightings) and top notes from contributors.
+- **Quiz & Leaderboard**: 10‑question quizzes from a curated pool to reinforce lake ecology concepts; track scores on a friendly leaderboard.
+- **Resources Hub**: Curated PDFs and credible links to learn about freshwater ecosystems, assessment methods, and restoration.
+- **Safety Guide**: Clear, youth‑oriented do’s & don’ts for safe and responsible lake exploration.
+- **Accounts & Auth**: Simple authentication to attribute contributions and retain progress.
+- **Scalable & Classroom‑Ready**: Works for schools, NGOs, and citizen groups aiming to monitor multiple sites over time.
+
 
 ## Features
 
@@ -44,95 +71,6 @@ The application includes a comprehensive 5-question questionnaire system coverin
 - **Database**: PostgreSQL with Prisma ORM
 - **Styling**: Tailwind CSS
 - **Deployment**: Ready for Vercel deployment
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+ 
-- PostgreSQL database
-- Environment variables configured
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd mapping
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   Create a `.env` file with:
-   ```env
-   DATABASE_URL="postgresql://username:password@host:port/database"
-   ```
-
-4. **Set up the database**
-   ```bash
-   # Generate Prisma client
-   npm run db:generate
-   
-   # Run database migrations
-   npm run db:migrate
-   
-   # Seed initial data
-   npm run db:seed
-   ```
-
-5. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-### Database Commands
-
-- `npm run db:generate` - Generate Prisma client
-- `npm run db:migrate` - Run database migrations
-- `npm run db:seed` - Seed database with initial water bodies
-- `npm run db:studio` - Open Prisma Studio for database management
-
-## Initial Data
-
-The application comes pre-seeded with 5 famous water bodies:
-- Lake Tahoe (California/Nevada)
-- Crater Lake (Oregon)
-- Lake Superior (Great Lakes)
-- Great Salt Lake (Utah)
-- Lake Michigan (Great Lakes)
-
-## API Endpoints
-
-### Water Bodies
-- `GET /api/water-bodies` - Get all water bodies
-- `POST /api/water-bodies` - Create new water body
-
-### Questionnaires
-- `GET /api/questionnaires` - Get all questionnaires
-- `GET /api/questionnaires?waterBodyId=<id>` - Get questionnaires for specific water body
-- `POST /api/questionnaires` - Submit new questionnaire
-
-### Clustering
-- `GET /api/clusters?bbox=<west,south,east,north>&zoom=<level>` - Get clustered water bodies for map
-
-## Usage
-
-1. **View Water Bodies**: Open the application to see water bodies on the interactive map
-2. **Add Water Body**: Click "🌊 Add Water Body" button to add new locations
-3. **Use Current Location**: The form can automatically detect your current GPS coordinates
-4. **Submit Questionnaires**: Click on any water body marker and use the questionnaire link
-5. **Environmental Assessment**: Complete the 5-question assessment for water quality monitoring
-
-## Contributing
-
-This application is designed for environmental monitoring and citizen science. Contributions are welcome for:
-- Additional questionnaire questions
-- Enhanced mapping features
-- Data visualization improvements
-- Mobile app development
 
 ## License
 
