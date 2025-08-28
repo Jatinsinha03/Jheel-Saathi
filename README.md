@@ -15,6 +15,8 @@ Beyond data collection, Jheel Saathi is a learning experience designed to build 
 ### Demo Link - [Demo Link](https://jheel-saathi.vercel.app/)
 ### Demo Video Link - [Demo Video Link](https://youtu.be/eTlDFY0aUeY)
 
+### PPT Link - [PPT Link](https://docs.google.com/presentation/d/1sXhWfUTS63lJ0VPR7lYSZ_TxTRv_9vYk9x8C31BQ9TI/edit?usp=sharing)
+
 ### Features
 
 - **Interactive Lake Questionnaire**: Guided, student‑friendly assessment of water clarity, biodiversity, vegetation, and human activity; supports repeat submissions over time.
